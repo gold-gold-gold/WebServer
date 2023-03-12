@@ -6,32 +6,33 @@
 #include <thread>
 #include <sys/time.h>
 #include <string.h>
-#include <stdarg.h>           // vastart va_end
+#include <stdarg.h>
 #include <assert.h>
-#include <sys/stat.h>         //mkdir
+#include <sys/stat.h>
 #include "BlockingQueue.h"
 #include "../buffer/Buffer.h"
+// #include "../Buffer.h"
 
 class Log {
 public:
-    void init(int level, const char* path = "./log", 
+    void init(int level, const char* path = "../log", 
                 const char* suffix =".log",
                 int maxQueueCapacity = 1024);
 
-    static Log* GetInstance();
-    static void FlushLogThread();
+    static Log* getInstance();
+    static void flushLogThread();
 
-    void write(int level, const char *format,...);
+    void write(int level, const char *format, ...);
     void flush();
 
-    int GetLevel();
-    void SetLevel(int level);
-    bool isOpen() { return isOpen_; }
+    int getLevel();
+    void setLevel(int level);
+    bool isOpen() { return is_opened_; }
     
 private:
     Log();
-    void AppendLogLevelTitle_(int level);
     virtual ~Log();
+    void appendLogPrefix_(int level);
     void AsyncWrite_();
 
 private:
@@ -46,31 +47,31 @@ private:
 
     int lineCount_;
     int toDay_;
-
-    bool isOpen_;
- 
-    Buffer buff_;
     int level_;
-    bool isAsync_;
+
+    bool is_opened_;
+    bool is_async_;
+
+    Buffer buff_;
 
     FILE* fp_;
-    std::unique_ptr<BlockDeque<std::string>> deque_; 
-    std::unique_ptr<std::thread> writeThread_;
-    std::mutex mtx_;
+    std::unique_ptr<BlockingQueue<std::string>> deque_; 
+    std::unique_ptr<std::thread> write_thread_;
+    std::mutex mutex_;
 };
 
 #define LOG_BASE(level, format, ...) \
     do {\
-        Log* log = Log::Instance();\
-        if (log->isOpen() && log->GetLevel() <= level) {\
+        Log* log = Log::getInstance();\
+        if (log->isOpen() && log->getLevel() <= level) {\
             log->write(level, format, ##__VA_ARGS__); \
             log->flush();\
         }\
     } while (0)
 
-#define LOG_DEBUG(format, ...) do {LOG_BASE(0, format, ##__VA_ARGS__)} while (0)
-#define LOG_INFO(format, ...) do {LOG_BASE(1, format, ##__VA_ARGS__)} while( 0)
-#define LOG_WARN(format, ...) do {LOG_BASE(2, format, ##__VA_ARGS__)} while (0)
-#define LOG_ERROR(format, ...) do {LOG_BASE(3, format, ##__VA_ARGS__)} while (0)
+#define LOG_DEBUG(format, ...) do {LOG_BASE(0, format, ##__VA_ARGS__);} while (0)
+#define LOG_INFO(format, ...) do {LOG_BASE(1, format, ##__VA_ARGS__);} while (0)
+#define LOG_WARN(format, ...) do {LOG_BASE(2, format, ##__VA_ARGS__);} while (0)
+#define LOG_ERROR(format, ...) do {LOG_BASE(3, format, ##__VA_ARGS__);} while (0)
 
-#endif //LOG_H
+#endif // LOG_H

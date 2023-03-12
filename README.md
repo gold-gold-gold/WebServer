@@ -15,7 +15,6 @@ C++ based tiny web server on Linux
 │   ├── buffer
 │   │   ├── Buffer.cpp
 │   │   └── Buffer.h
-│   ├── Buffer.h
 │   ├── Epoller.h
 │   ├── HttpConn.cpp
 │   ├── HttpConn.h
@@ -28,14 +27,11 @@ C++ based tiny web server on Linux
 │   │   ├── BlockingQueue.h
 │   │   ├── Log.cpp
 │   │   └── Log.h
-│   ├── main
 │   ├── main.cpp
+│   ├── Makefile
 │   ├── Server.cpp
 │   ├── Server.h
 │   ├── ThreadPool.h
-│   ├── timer
-│   │   ├── HeapTimer.cpp
-│   │   └── HeapTimer.h
 │   ├── TimerQueue.cpp
 │   └── TimerQueue.h
 ├── log

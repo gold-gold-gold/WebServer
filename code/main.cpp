@@ -12,6 +12,8 @@
 // #include "Locker.h"
 #include "ThreadPool.h"
 #include "HttpConn.h"
+#include "log/Log.h"
+#include "TimerQueue.h"
 
 #define handle_error(msg) \
         do {perror(msg); exit(EXIT_FAILURE);} while (0)
@@ -19,6 +21,7 @@
 const int MAX_FDS = 65535;
 const int LISTEN_BACKLOG = 5;
 const int MAX_EVENTS = 10;
+const int TIME_OUT = 60000; // ms
 
 extern void epoll_add(int epfd, int sfd, bool oneshot);
 extern void epoll_del(int epfd, int sfd);
@@ -38,6 +41,12 @@ int main(int argc, char *argv[]) {
     int port = atoi(argv[1]);
 
     signal(SIGPIPE, SIG_IGN);
+
+    // 实例化Log类
+    Log::getInstance()->init(1);
+
+    // 创建定时器队列
+    TimerQueue timer_queue;
 
     // 创建线程池
     ThreadPool<HttpConn> *pool = nullptr;
@@ -69,9 +78,11 @@ int main(int argc, char *argv[]) {
     epoll_add(epfd, lfd, false);
     HttpConn::epfd_ = epfd;
 
-    for ( ; ; ) {
+    LOG_INFO("========== Server start ==========");
 
-        nready = epoll_wait(epfd, events, MAX_EVENTS, -1);
+    for ( ; ; ) {
+        int wait_time = timer_queue.getNextTick();
+        nready = epoll_wait(epfd, events, MAX_EVENTS, wait_time);
 
         for (int i = 0; i < nready; ++i) {
             curfd = events[i].data.fd;
@@ -86,15 +97,22 @@ int main(int argc, char *argv[]) {
                 }
                 conns[cfd].init(cfd, client_addr);
                 // printf("cfd = %d\n", cfd);
-            } else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
+                // 添加定时器
+                timer_queue.add(cfd, TIME_OUT, std::bind(&HttpConn::close_conn, &conns[cfd]));
+            }
+            else if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR)) {
                 conns[curfd].close_conn();
-            } else if (events[i].events & EPOLLIN) {
-                if (conns[curfd].read())
+            }
+            else if (events[i].events & EPOLLIN) {
+                if (conns[curfd].read()) {
+                    timer_queue.adjust(cfd, TIME_OUT);
                     pool->enqueue(&conns[curfd]);
-                else
+                }
+                else {
                     conns[curfd].close_conn();
-
-            } else if (events[i].events & EPOLLOUT) { 
+                }
+            }
+            else if (events[i].events & EPOLLOUT) { 
 
                 if (!conns[curfd].write())
                     conns[curfd].close_conn();

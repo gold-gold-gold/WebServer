@@ -10,14 +10,14 @@
 #include <vector>
 #include <map>
 
-#include "Buffer.h"
+#include "./buffer/Buffer.h"
 // #include "HttpRequest.h"
 #include "HttpResponse.h"
 using std::string;
 
 class HttpConn {
  public:
-	 // HTTP请求方法，这里只支持GET
+	 // HTTP请求方法，暂时只支持GET
     enum METHOD { GET, POST, HEAD, PUT, DELETE, TRACE, OPTIONS, CONNECT };
 
 	// 解析客户端请求时，主状态机的状态
@@ -27,7 +27,7 @@ class HttpConn {
     enum CHECK_STATE { CHECK_STATE_REQUESTLINE, CHECK_STATE_HEADER, CHECK_STATE_CONTENT };
     
     // 从状态机的三种可能状态，即行的读取状态，分别表示
-    // 1.读取到一个完整的行 2.行出错 3.行数据尚且不完整
+    // 1.读取到一个完整的行 2.行出错 3.行数据不完整
     enum LINE_STATUS { LINE_OK, LINE_BAD, LINE_OPEN };
 
 	// 服务器处理HTTP请求的可能结果，报文解析的结果

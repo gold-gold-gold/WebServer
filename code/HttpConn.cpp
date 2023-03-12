@@ -6,9 +6,12 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <arpa/inet.h>
 
 #include <algorithm>
 #include <iostream>
+
+#include "log/Log.h"
 using std::cout; using std::endl;
 
 // 定义HTTP响应的一些状态信息
@@ -69,13 +72,16 @@ void HttpConn::init(int cfd, const sockaddr_in &addr) {
     setSockPortReusable(cfd);
     epoll_add(epfd_, cfd, false);
     setFdNonblocking(cfd);
+    LOG_INFO("Client[%d](%s:%d) in", cfd, inet_ntoa(addr.sin_addr), addr.sin_port);
 }
 
 void HttpConn::close_conn() {
+    response_.unmap();
     if (cfd_ != -1) {
         epoll_del(epfd_, cfd_);
         close(cfd_);
         cfd_ = -1;
+        LOG_INFO("Client[%d](%s:%d) quit", cfd_, inet_ntoa(addr_.sin_addr), addr_.sin_port);
     }
 }
 

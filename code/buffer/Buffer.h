@@ -1,51 +1,57 @@
 #ifndef BUFFER_H
 #define BUFFER_H
-#include <cstring>   //perror
-#include <iostream>
-#include <unistd.h>  // write
-#include <sys/uio.h> //readv
-#include <vector> //readv
-#include <atomic>
-#include <assert.h>
+
+#include <sys/uio.h>
+#include <string>
+#include <vector>
 
 class Buffer {
 public:
-    Buffer(int initBuffSize = 1024);
-    ~Buffer() = default;
+    Buffer();
+    Buffer(size_t sz);
+    ~Buffer();
 
-    size_t WritableBytes() const;       
-    size_t ReadableBytes() const ;
-    size_t PrependableBytes() const;
+    // const char* findCRLF(const char *start) const;
+    // const char* peek() const { return buffer_.data() + index_; }
+    // char* readBegin() { return buffer_.data() + read_index_; }
 
-    const char* peek() const;
-    void EnsureWriteable(size_t len);
-    void HasWritten(size_t len);
+    const char* readBegin() const;
+    char* writeBegin();
 
-    void Retrieve(size_t len);
-    void RetrieveUntil(const char* end);
+    size_t writable();
+    size_t readable();
 
-    void RetrieveAll() ;
-    std::string RetrieveAllToStr();
+    void hasRead(size_t len);
+    void hasWritten(size_t len);
 
-    const char* BeginWriteConst() const;
-    char* BeginWrite();
+    void retrieveAll();
+    std::string retrieveAllToStr();
 
-    void Append(const std::string& str);
-    void Append(const char* str, size_t len);
-    void Append(const void* data, size_t len);
-    void Append(const Buffer& buff);
+    void append(const std::string &str);
+    void appendFile(char *addr, size_t len);
 
-    ssize_t ReadFd(int fd, int* Errno);
-    ssize_t WriteFd(int fd, int* Errno);
+    bool readFinished();
+
+    const struct iovec *getIOV();
+
+    int count();
+
+    void reset();
 
 private:
-    char* BeginPtr_();
-    const char* BeginPtr_() const;
-    void MakeSpace_(size_t len);
-
     std::vector<char> buffer_;
-    std::atomic<std::size_t> readPos_;
-    std::atomic<std::size_t> writePos_;
+    size_t read_index_;
+    size_t write_index_;
+    static const int DEFAULT_BUFFER_SIZE = 2048;
+
+    char *addr_;
+
+    struct iovec iov_[2];
+    int iov_count_;
+
+    int total_len_;
+
+    void extend(size_t len);
 };
 
-#endif //BUFFER_H
+#endif
